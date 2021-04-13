@@ -1,23 +1,23 @@
-import logo from './logo.svg';
+import React, {useEffect, useState} from 'react';
+import ReactDOM from 'react-dom';
+import Card from './components/Card';
 import './App.css';
 
 function App() {
+  const [tree, setTree] = useState([1]);
+  
+  const add = () => {
+    setTree([
+      ...tree, `new_object_${Math.random()}`
+    ])
+  }
+
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+    <div className="App">     
+      <div style={{width:30, height:30,}} onClick={add}>+</div> 
+      {
+        tree.map(uuid => <Card key={uuid} uuid={uuid} createNewCard={add}/>)
+      }
     </div>
   );
 }
