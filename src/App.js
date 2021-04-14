@@ -9,31 +9,38 @@ function App() {
     content: null, // -> just render this!
   },]);
   const [currentId, setCurrentId] = useState(null);
-  const sampleMarkup = 'I am making a collaborative editor'
+  const sampleMarkup = ''
   
 /* 
+- [done] how to apply blockquote
+- [done] when changing the state, highlight stay? -> onMouseDown + preventDefault();
+- [done] bold를 누르고 나면, 그다음 부터 쳐지는 것은 바뀌어야 할텐데! 어떻게 하지?
+- [half] custom block rendering.
+- [done] when enter -> new thing. -> use props.
 - [done] 현재 상태에서 딜리트를 누르면, 위로 올라가서, 위에거 하나씩 지우게 되어야 함.
-  --> 지금 있는 위치에서 있는게 있는지 없는지를 알 방법?
 - [done] 키보드 아래로 내려가게. (하나의 카드에서 끝나면, 다음 카드로 가게끔)
 - [done]위에서 엔터를 치면, 맨아래로 추가가 되는데, 현재것이 추가가 바로 아래에 되어야 함. -> 어떻게 구현할지 생각해보기. 
-- 텍스트의 왼쪽 끝에 왔을 때에!
-  - 왼쪽에 암것도 없는 걸 어떻게 알지? location?
+- [done] 텍스트의 왼쪽 끝에 왔을 때에!
 - [done[ 내려갈때! 다음 카드로 넘어가게 하자.
 - [done] 마우스의 현재 커서 위치 어떻게 알지? var start = selectionState.getStartOffset();
-- 여러명이 들어왔다면, 지우는 건 사이좋게 지워야 한다. ㅋㅋ
 - [done] 별로 내용이 없을 때 지우게 하자.
-
-- 특정 위치로 마우스 커서 가져가기.
-
+- [done] 특정 위치로 마우스 커서 가져가기.
+  - someFunction
 - [done] 색깔 바꾸기 - 단축키 하나 추가하기
   - command + shift + h
 - [done] notion처럼! 셀렉션이 되면, 바로 반응하도록.
-- [ ] 다른 거 누르면, 툴바 꺼지게!
-- 전체 선택 해서 지우는거 되도록.
+- [done]rect 관련해서, 항상 절대적인 값 잘하기 
+  fixed로 해결
+  - [ ] 다른 거 누르면, 툴바 꺼지게!
+- [ ] 전체 선택 해서 지우는거 되도록. -> 이건 모두를 위해서 안해야 하는거 아닌가? 일단 금지 ㅋㅋ -ㅅ-; 
+  - ctrl + all -> 셀렉터블 하게끔....
 - 위젯. 
   - 엑티브 상태면 띄우기
 - 지우는걸 어떻게 해야 하나? 누가 어떻게 저장하고 있는게 현명한것일까?
-- checkbox 
+- checkbox - 슬슬 한 번 해보자. 내일!
+- 여러명이 들어왔다면, 지우는 건 사이좋게 지워야 한다. ㅋㅋ
+- 지우는 것과 작성하는 것에 대해서, 잘 생각해보도록 하자. ctrl + z가 지원되는 것..
+- optimzation
 */
 
   const add = () => {

@@ -22,7 +22,6 @@ figure{
   align-items:center;
 }
 
-
 .DraftEditor-root{
   position:relative;
 }
@@ -30,6 +29,7 @@ figure{
 .public-DraftEditorPlaceholder-root{
   position: absolute; left:0; top:0;
   color:gray;
+  font-size:24px;
 }
 
 span{

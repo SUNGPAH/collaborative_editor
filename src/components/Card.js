@@ -4,17 +4,6 @@ import {getDefaultKeyBinding, KeyBindingUtil} from 'draft-js';
 import React, {useState, useEffect, useRef} from 'react';
 
 const {hasCommandModifier} = KeyBindingUtil;
-
-//[done] how to apply blockquote
-//[done] when changing the state, highlight stay? -> onMouseDown + preventDefault();
-//[done] bold를 누르고 나면, 그다음 부터 쳐지는 것은 바뀌어야 할텐데! 어떻게 하지?
-//what is contentState.getEntity(someKey)
-//[half] custom block rendering.
-//[] how to apply the inline state (color change)
-//[] when deleting.. go to the end of the previous element, instead of delting all.
-//[done] when enter -> new thing. -> use props.
-//[ ] if you are are at the end of the sentence, then move to next card.
-
 const MediaComponent = (props) => {
   const {block, contentState} = props;
   const {foo} = props.blockProps;
@@ -24,7 +13,6 @@ const MediaComponent = (props) => {
     <EditorBlock {...props} />
   </div>
 }
-
 
 const Card = ({uuid, createNewCard, updateId, sampleMarkup, findPrevCard, findNextCard, currentId}) => {
   const editorRef = useRef();
@@ -40,11 +28,9 @@ const Card = ({uuid, createNewCard, updateId, sampleMarkup, findPrevCard, findNe
   const [editorState, setEditorState] = useState(initState);
   const [hasEnded, setHasEnded] = useState(false);
   const [endCnt, setEndCnt] = useState(0);
-  const [showPanel, setShowPanel] = useState(false);
-  const [toolbox, setToolbox] = useState(null)
-    
-  const upHandler = () => {
+  const [toolbox, setToolbox] = useState(null)    
 
+  const upHandler = () => {
     const currentContent = editorState.getCurrentContent();
     const selectionState = editorState.getSelection();
     let start = selectionState.getStartOffset();
@@ -72,21 +58,39 @@ const Card = ({uuid, createNewCard, updateId, sampleMarkup, findPrevCard, findNe
   }
   
   useEffect(() => {
-
-    //if currentId is not uuid, then.. selection cancel.
-    //if something!
+    //currentId가 바뀌니깐. 
     if(currentId !== uuid){
-      //then remove selection..    
+      //근데, 계속 바뀌는데, 에디터 스테이트를 계속 이렇게 바꿔줘야 하는가? 
+      //한 번 바꿔두면, 그만 바꾸고 싶지 않을까?
+
+      //스테이트 업댓 말구 방법이 없나.
       // setEditorState(EditorState.forceSelection(editorState, SelectionState.createEmpty('')))
-      // console.log(currentId);
-      // console.log(uuid);
-      // setEditorState(editorState => EditorState.moveFocusToEnd(editorState));
-      //toolBox is something
+      //이거로 하면 -> 문제가 생김. 아래로 안내려가짐..
+
     }else{
       console.log('현재..');
     }
 
   }, [currentId])
+
+  const someFunction = () => {
+    const content = editorState.getCurrentContent();
+    const blockMap = content.getBlockMap();
+    const key = blockMap.last().getKey();
+    // const length = blockMap.last().getLength();
+
+    const selection = new SelectionState({
+      anchorKey: key,
+      anchorOffset: 3,
+      focusKey: key,
+      focusOffset: 3,
+    });
+
+    const afterSelectionMove = EditorState.acceptSelection(editorState, selection)
+    const newEditorState =  EditorState.forceSelection(afterSelectionMove, afterSelectionMove.getSelection());
+    setEditorState(newEditorState)
+    return
+  }
 
   useEffect(() => {
     if(hasEnded){
@@ -108,31 +112,20 @@ const Card = ({uuid, createNewCard, updateId, sampleMarkup, findPrevCard, findNe
     return t;
   }
 
-  /*
-  1. 
-
-  */
-  
   useEffect(() => {
-
-    //state가 바뀔 때마다...
-    
-    var selection = editorState.getSelection();
-    
-    // if(currentId === uuid){
-      
-    // }else{
-    //   console.log('different');        
-    // }
-
+    var selection = editorState.getSelection();    
     if (selection.isCollapsed()) {
       setToolbox(null);
+
+      // 여기서 스테이트를 업댓 할 수는 없음. 
+      // 으악
+      // setEditorState(EditorState.forceSelection(editorState, SelectionState.createEmpty('')))
+
     }else {
       try{
         var selected = getSelected();
         var rect = selected.getRangeAt(0).getBoundingClientRect();
-        setToolbox({left: rect.left, top: rect.top, width: rect.width})
-        
+        setToolbox({left: rect.left, top: rect.top - 50, width: rect.width})
       }catch(e){
         console.log('error');
         setToolbox(null);
@@ -162,10 +155,6 @@ const Card = ({uuid, createNewCard, updateId, sampleMarkup, findPrevCard, findNe
       focusEditor();
     }
   }, [currentId])
-
-  /*
-    if (contentBlock.getText() === 'Hii') {
-  */
 
   const onChange = (editorState) => {
     setEditorState(editorState);
@@ -213,12 +202,19 @@ const Card = ({uuid, createNewCard, updateId, sampleMarkup, findPrevCard, findNe
       return 'highlight';
     }
 
+    if (hasCommandModifier(e) && e.shiftKey && e.key === 'g') {
+      return 'test';
+    }
+
     //ctrl+z를 누를 때에, 얼럿도 띄우고 싶다면, 여기서 다시 함수를 작성해야 함.
     return getDefaultKeyBinding(e);
   }
   
   const handleKeyCommand = (command, editorState) => {
     console.log(command);
+    if(command === "test"){
+      someFunction();
+    }
     
     if (command === 'myeditor-save'){
       alert('saved! - I need to define custom method');
@@ -250,9 +246,6 @@ const Card = ({uuid, createNewCard, updateId, sampleMarkup, findPrevCard, findNe
         }
       }
     }
-
-    console.log('command');
-    console.log(command);
 
     const newState = RichUtils.handleKeyCommand(editorState, command);
     if (newState) {
@@ -293,9 +286,17 @@ const Card = ({uuid, createNewCard, updateId, sampleMarkup, findPrevCard, findNe
     setEditorState(EditorState.forceSelection(editorState, SelectionState.createEmpty('')))
   }
 
+  const _onColor = (evt) =>{
+    evt.preventDefault();
+    onChange(RichUtils.toggleInlineStyle(editorState, 'RED'));    
+  }
+  
   const styleMap = {
     'HIGHLIGHT': {
       'backgroundColor': '#faed27',
+    },
+    'RED': {
+      color:'red',
     }
   };
 
@@ -304,12 +305,14 @@ const Card = ({uuid, createNewCard, updateId, sampleMarkup, findPrevCard, findNe
       <div style={{padding:8, position:'relative',}} onClick={focusEditor}>
         {
           toolbox &&
-          <div style={{position:'absolute', left:toolbox.left, top:toolbox.top, width:200, height:50, zIndex:10,}}>
+          <div style={{position:'fixed', left:toolbox.left, top:toolbox.top, width:200, height:50, zIndex:10,}}>
             <button onMouseDown={_onBoldClick}>Bold</button>
+            <button onMouseDown={_onColor}>Red</button>
             <button onClick={_onBlockQuote}>blockQuote</button>
             <button onClick={_onAtomic}>Atomic</button>
             <button onMouseDown={_onClose}>Exit</button>
             <button onMouseDown={_highlight}>highlight</button>    
+            <button onMouseDown={_onMoveToEnd}>move focus</button>    
           </div>
         }
 
