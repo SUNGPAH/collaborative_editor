@@ -31,3 +31,8 @@ figure{
   position: absolute; left:0; top:0;
   color:gray;
 }
+
+span{
+  font-size:24px;
+  font-family:'Arial';
+}

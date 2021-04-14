@@ -1,5 +1,5 @@
 import ReactDOM from 'react-dom';
-import {Editor, EditorState, EditorBlock, convertToRaw, RichUtils, ContentState, convertFromHTML} from 'draft-js';
+import {Editor, EditorState, EditorBlock, SelectionState, convertToRaw, RichUtils, ContentState, convertFromHTML} from 'draft-js';
 import {getDefaultKeyBinding, KeyBindingUtil} from 'draft-js';
 import React, {useState, useEffect, useRef} from 'react';
 
@@ -12,18 +12,8 @@ const {hasCommandModifier} = KeyBindingUtil;
 //[half] custom block rendering.
 //[] how to apply the inline state (color change)
 //[] when deleting.. go to the end of the previous element, instead of delting all.
-
 //[done] when enter -> new thing. -> use props.
 //[ ] if you are are at the end of the sentence, then move to next card.
-
-//when deleting, inside the custom components things are little weird..
-
-//editorstate
-  //getSelection
-  //[done] moveSelectionToEnd
-  //[done] moveFocusToEnd
-//contentState
-//blockState
 
 const MediaComponent = (props) => {
   const {block, contentState} = props;
@@ -36,10 +26,10 @@ const MediaComponent = (props) => {
 }
 
 
-const Card = ({uuid, createNewCard}) => {
+const Card = ({uuid, createNewCard, updateId, sampleMarkup, findPrevCard, findNextCard, currentId}) => {
   const editorRef = useRef();
   // const [editorState, setEditorState] = useState(EditorState.createEmpty());  
-  const sampleMarkup = '';
+  // const sampleMarkup = '';
   const blocksFromHTML = convertFromHTML(sampleMarkup);
   const state = ContentState.createFromBlockArray(
     blocksFromHTML.contentBlocks,
@@ -48,18 +38,138 @@ const Card = ({uuid, createNewCard}) => {
 
   const initState = EditorState.createWithContent(state);
   const [editorState, setEditorState] = useState(initState);
+  const [hasEnded, setHasEnded] = useState(false);
+  const [endCnt, setEndCnt] = useState(0);
+  const [showPanel, setShowPanel] = useState(false);
+  const [toolbox, setToolbox] = useState(null)
+    
+  const upHandler = () => {
+
+    const currentContent = editorState.getCurrentContent();
+    const selectionState = editorState.getSelection();
+    let start = selectionState.getStartOffset();
+
+    if(start === 0){
+      if(!currentContent.hasText()){
+        findPrevCard(uuid, 'delete');
+      }else{
+        findPrevCard(uuid);
+      }
+    }
+  }
+
+  const downHandler = (e) => {
+    const currentContent = editorState.getCurrentContent();
+    const length = currentContent.getPlainText().length;
+    const selectionState = editorState.getSelection();
+    let start = selectionState.getStartOffset();
+
+    if(length === start){
+      setHasEnded(Math.random());
+    }else{
+      setHasEnded(false);
+    }  
+  }
   
+  useEffect(() => {
+
+    //if currentId is not uuid, then.. selection cancel.
+    //if something!
+    if(currentId !== uuid){
+      //then remove selection..    
+      // setEditorState(EditorState.forceSelection(editorState, SelectionState.createEmpty('')))
+      // console.log(currentId);
+      // console.log(uuid);
+      // setEditorState(editorState => EditorState.moveFocusToEnd(editorState));
+      //toolBox is something
+    }else{
+      console.log('현재..');
+    }
+
+  }, [currentId])
+
+  useEffect(() => {
+    if(hasEnded){
+      setEndCnt(prev => prev + 1);
+    }else{
+      setEndCnt(0);
+    }
+  }, [hasEnded])
+
+  function getSelected() {
+    var t = '';
+    if (window.getSelection) {
+      t = window.getSelection();
+    } else if (document.getSelection) {
+      t = document.getSelection();
+    } else if (document.selection) {
+      t = document.selection.createRange().text;
+    }
+    return t;
+  }
+
+  /*
+  1. 
+
+  */
+  
+  useEffect(() => {
+
+    //state가 바뀔 때마다...
+    
+    var selection = editorState.getSelection();
+    
+    // if(currentId === uuid){
+      
+    // }else{
+    //   console.log('different');        
+    // }
+
+    if (selection.isCollapsed()) {
+      setToolbox(null);
+    }else {
+      try{
+        var selected = getSelected();
+        var rect = selected.getRangeAt(0).getBoundingClientRect();
+        setToolbox({left: rect.left, top: rect.top, width: rect.width})
+        
+      }catch(e){
+        console.log('error');
+        setToolbox(null);
+      }
+    }
+  }, [editorState])
+
+  useEffect(() => {
+    if(endCnt >= 1){
+      const currentContent = editorState.getCurrentContent();
+      const length = currentContent.getPlainText().length;
+      const selectionState = editorState.getSelection();
+      let start = selectionState.getStartOffset();
+      if(length === start){
+        findNextCard(uuid);
+        return
+      }
+    }
+  }, [endCnt])
+
   useEffect(() => {
     focusEditor();
   }, [])
 
-  //custom block을 만드는 것은 어떻게 하지? 
-/*
+  useEffect(() => {
+    if(currentId === uuid){
+      focusEditor();
+    }
+  }, [currentId])
+
+  /*
     if (contentBlock.getText() === 'Hii') {
-*/
+  */
 
   const onChange = (editorState) => {
     setEditorState(editorState);
+    updateId(uuid);
   }
 
   const focusEditor = () => {
@@ -67,12 +177,6 @@ const Card = ({uuid, createNewCard}) => {
       editorRef.current.focus();
     }
   }
-
-  useEffect(() => {
-    const currentContent = editorState.getCurrentContent();
-    const raw = convertToRaw(currentContent);
-    console.log(raw);
-  }, [editorState]);
 
   function myBlockStyleFn(contentBlock) {
     const type = contentBlock.getType();
@@ -105,45 +209,58 @@ const Card = ({uuid, createNewCard}) => {
       return 'split-block-new'
     }
 
+    if (hasCommandModifier(e) && e.shiftKey && e.key === 'h') {
+      return 'highlight';
+    }
+
     //ctrl+z를 누를 때에, 얼럿도 띄우고 싶다면, 여기서 다시 함수를 작성해야 함.
     return getDefaultKeyBinding(e);
   }
   
   const handleKeyCommand = (command, editorState) => {
+    console.log(command);
+    
     if (command === 'myeditor-save'){
       alert('saved! - I need to define custom method');
       return;
     }
 
     if(command === "split-block-new"){
-      // alert('new');
-      // we are going to create new one.
       createNewCard();
-
-      return;
     }
     
     if (command === "split-block"){
-      alert('split block..')
-      //how to prevent enter here..?
-      //현재 커서가 어딨는지에 따라서 이야기가 달라지면 되는거 인가
-
       return ;
     }
 
-    if (command === "backspace"){
-      // what am I deleting now?
-      // console.log('when deleting');
-      // console.log(editorState.getEntityAt(0));
-      // const currentContent = editorState.getCurrentContent();
+    if (command === "highlight"){
+      onChange(RichUtils.toggleInlineStyle(editorState, 'HIGHLIGHT'));
     }
 
-    const newState = RichUtils.handleKeyCommand(editorState, command);
+    if (command === "backspace"){
+      const currentContent = editorState.getCurrentContent();
+      const selectionState = editorState.getSelection();
+      let start = selectionState.getStartOffset();
 
+      if(start === 0){
+        if(!currentContent.hasText()){
+          findPrevCard(uuid, 'delete');
+        }else{
+          findPrevCard(uuid);
+        }
+      }
+    }
+
+    console.log('command');
+    console.log(command);
+
+    const newState = RichUtils.handleKeyCommand(editorState, command);
     if (newState) {
+      console.log('new state');
       onChange(newState);
       return 'handled';
     }
+    console.log('not handled');
 
     return 'not-handled';
   }
@@ -163,26 +280,54 @@ const Card = ({uuid, createNewCard}) => {
   
   const _onMoveToEnd = (evt) => {
     evt.preventDefault();
-    //oh I see!
     setEditorState(editorState => EditorState.moveFocusToEnd(editorState));
   }
 
-  //can we build something like notion with this tool?
+  const _highlight = (evt) => {
+    evt.preventDefault();
+    onChange(RichUtils.toggleInlineStyle(editorState, 'HIGHLIGHT'));
+  }
+
+  const _onClose = (evt) => {
+    // evt.preventDefault();
+    setEditorState(EditorState.forceSelection(editorState, SelectionState.createEmpty('')))
+  }
+
+  const styleMap = {
+    'HIGHLIGHT': {
+      'backgroundColor': '#faed27',
+    }
+  };
 
   return (
     <div>      
-      <button onMouseDown={_onBoldClick}>Bold</button>
-      <button onClick={_onBlockQuote}>blockQuote</button>
-      <button onClick={_onAtomic}>Atomic</button>
-      <button onMouseDown={_onMoveToEnd}>FocusMove</button>
-      <div style={{border:'1px solid red', padding:40,}} onClick={focusEditor}>
+      <div style={{padding:8, position:'relative',}} onClick={focusEditor}>
+        {
+          toolbox &&
+          <div style={{position:'absolute', left:toolbox.left, top:toolbox.top, width:200, height:50, zIndex:10,}}>
+            <button onMouseDown={_onBoldClick}>Bold</button>
+            <button onClick={_onBlockQuote}>blockQuote</button>
+            <button onClick={_onAtomic}>Atomic</button>
+            <button onMouseDown={_onClose}>Exit</button>
+            <button onMouseDown={_highlight}>highlight</button>    
+          </div>
+        }
+
         <Editor
+          customStyleMap={styleMap}
           placeholder="Tell a story..."
           ref={editorRef}
           handleKeyCommand={handleKeyCommand}
           blockStyleFn={myBlockStyleFn} 
           blockRendererFn={myBlockRenderer} 
           editorState={editorState}
+          onEscape={keyEvent=>console.log('Escape just  pressed')}
+          onDownArrow={keyEvent => {
+            downHandler(keyEvent)
+          }}
+          onUpArrow={keyEvent => {
+            upHandler()
+          }}
           onChange={onChange}
           keyBindingFn={myKeyBindingFn}
         />
