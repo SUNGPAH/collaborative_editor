@@ -1,7 +1,8 @@
 import ReactDOM from 'react-dom';
-import {Editor, EditorState, EditorBlock, SelectionState, convertToRaw, RichUtils, ContentState, convertFromHTML} from 'draft-js';
+import {Editor, EditorState, EditorBlock, SelectionState, convertToRaw, RichUtils, ContentState, Modifier, convertFromRaw, convertFromHTML} from 'draft-js';
 import {getDefaultKeyBinding, KeyBindingUtil} from 'draft-js';
 import React, {useState, useEffect, useRef} from 'react';
+import { isElementOfType } from 'react-dom/test-utils';
 
 const {hasCommandModifier} = KeyBindingUtil;
 const MediaComponent = (props) => {
@@ -14,21 +15,45 @@ const MediaComponent = (props) => {
   </div>
 }
 
-const Card = ({uuid, createNewCard, updateId, sampleMarkup, findPrevCard, findNextCard, currentId}) => {
+const Card = ({uuid, createNewCard, 
+  updateId, 
+  updateData,
+  initContentState,
+  findPrevCard, 
+  findNextCard, 
+  currentId, 
+  onCheckBox, 
+  initCardType, initIndentCnt}) => {
   const editorRef = useRef();
-  // const [editorState, setEditorState] = useState(EditorState.createEmpty());  
-  // const sampleMarkup = '';
+  const editorWrapperRef = useRef();
+
+  let defaultEditorState
+  if(initContentState){
+    defaultEditorState = EditorState.createWithContent(convertFromRaw(initContentState));
+  }else{
+    defaultEditorState = EditorState.createEmpty()
+  }
+
+  const [editorState, setEditorState] = useState(defaultEditorState);  
+  
+  /*
   const blocksFromHTML = convertFromHTML(sampleMarkup);
   const state = ContentState.createFromBlockArray(
     blocksFromHTML.contentBlocks,
     blocksFromHTML.entityMap,
   );
+  */
 
-  const initState = EditorState.createWithContent(state);
-  const [editorState, setEditorState] = useState(initState);
+  // const initState = EditorState.createWithContent(state);
+  // const [editorState, setEditorState] = useState(initState);
+
   const [hasEnded, setHasEnded] = useState(false);
   const [endCnt, setEndCnt] = useState(0);
   const [toolbox, setToolbox] = useState(null)    
+  const [cardType, setCardType] = useState(initCardType || 'paragraph');
+  const [indentCnt, setIndentCnt] = useState(initIndentCnt || 0);
+  const [myTimeout, setMyTimeout] = useState(null);
+  const [timeState, setTimeState] = useState(null);
 
   const upHandler = () => {
     const currentContent = editorState.getCurrentContent();
@@ -44,6 +69,8 @@ const Card = ({uuid, createNewCard, updateId, sampleMarkup, findPrevCard, findNe
     }
   }
 
+  //여기서 우리가 해야 할 것은.. 키보드를 리스닝 하는 것.
+
   const downHandler = (e) => {
     const currentContent = editorState.getCurrentContent();
     const length = currentContent.getPlainText().length;
@@ -57,22 +84,6 @@ const Card = ({uuid, createNewCard, updateId, sampleMarkup, findPrevCard, findNe
     }  
   }
   
-  useEffect(() => {
-    //currentId가 바뀌니깐. 
-    if(currentId !== uuid){
-      //근데, 계속 바뀌는데, 에디터 스테이트를 계속 이렇게 바꿔줘야 하는가? 
-      //한 번 바꿔두면, 그만 바꾸고 싶지 않을까?
-
-      //스테이트 업댓 말구 방법이 없나.
-      // setEditorState(EditorState.forceSelection(editorState, SelectionState.createEmpty('')))
-      //이거로 하면 -> 문제가 생김. 아래로 안내려가짐..
-
-    }else{
-      console.log('현재..');
-    }
-
-  }, [currentId])
-
   const someFunction = () => {
     const content = editorState.getCurrentContent();
     const blockMap = content.getBlockMap();
@@ -100,6 +111,14 @@ const Card = ({uuid, createNewCard, updateId, sampleMarkup, findPrevCard, findNe
     }
   }, [hasEnded])
 
+
+  // useEffect(() => {
+  //   //typing..
+  //   //
+  // }, [])
+   
+  
+
   function getSelected() {
     var t = '';
     if (window.getSelection) {
@@ -116,11 +135,7 @@ const Card = ({uuid, createNewCard, updateId, sampleMarkup, findPrevCard, findNe
     var selection = editorState.getSelection();    
     if (selection.isCollapsed()) {
       setToolbox(null);
-
-      // 여기서 스테이트를 업댓 할 수는 없음. 
-      // 으악
       // setEditorState(EditorState.forceSelection(editorState, SelectionState.createEmpty('')))
-
     }else {
       try{
         var selected = getSelected();
@@ -131,6 +146,22 @@ const Card = ({uuid, createNewCard, updateId, sampleMarkup, findPrevCard, findNe
         setToolbox(null);
       }
     }
+
+    //두개의 스테이트가 바뀌었었는지를 체크 하자...
+    //내가 키보드를 바뀔 때 마다아~~
+    //스테이트가 바뀔 떄마다아~ 
+    //키보드 바뀔 떄마다아~
+    
+
+
+    // 에디터 스테이트가 바뀔 때에..
+
+
+
+
+
+
+
   }, [editorState])
 
   useEffect(() => {
@@ -164,6 +195,7 @@ const Card = ({uuid, createNewCard, updateId, sampleMarkup, findPrevCard, findNe
   const focusEditor = () => {
     if(editorRef.current){
       editorRef.current.focus();
+      editorWrapperRef.current.scrollIntoView();
     }
   }
 
@@ -189,8 +221,39 @@ const Card = ({uuid, createNewCard, updateId, sampleMarkup, findPrevCard, findNe
     }
   }
 
+  const updateCurrentDraft = () => {
+    const contentState = editorState.getCurrentContent();
+    let raw = convertToRaw(contentState)
+    raw.cardType = cardType
+    raw.id = uuid
+    raw.indentCnt = indentCnt;
+    updateData(uuid, raw);
+  }
+
   const myKeyBindingFn = (e) => {
+
+    if(myTimeout) {
+      clearTimeout(myTimeout);
+      setMyTimeout(setTimeout(() => {
+        updateCurrentDraft();
+      }, 500))
+    }else{
+      setMyTimeout(setTimeout(() => {
+        updateCurrentDraft();
+      }, 1000));
+    }
+
     if (e.keyCode === 83 /* `S` key */ && hasCommandModifier(e)) {
+
+      const contentState = editorState.getCurrentContent();
+      let raw = convertToRaw(contentState)
+      console.log('raw..');
+      console.log(raw);
+      raw.cardType = cardType
+      raw.id = uuid
+      raw.indentCnt = indentCnt;
+
+      updateData(uuid, raw);
       return 'myeditor-save';
     }
 
@@ -204,6 +267,83 @@ const Card = ({uuid, createNewCard, updateId, sampleMarkup, findPrevCard, findNe
 
     if (hasCommandModifier(e) && e.shiftKey && e.key === 'g') {
       return 'test';
+    }
+
+    if (e.key === "tab"){
+      return 'tab';
+    }
+
+    if (e.keyCode === 32){
+      const contentState = editorState.getCurrentContent();
+      const selectionState = editorState.getSelection();
+      const something = editorState.getCurrentContent().getBlockMap().first().text.split("")[0];
+
+      if(something === "-"){        
+        setCardType('bullet');
+
+        const currentSelectionState = editorState.getSelection();
+        const newContentState = Modifier.replaceText(
+          contentState,
+          // The text to replace, which is represented as a range with a start & end offset.
+          selectionState.merge( {
+            // The starting position of the range to be replaced.
+            anchorOffset: 0,
+            // The end position of the range to be replaced.
+            focusOffset: 1
+          }),
+          // The new string to replace the old string.
+          ""
+        );
+
+        setEditorState(EditorState.push(
+          editorState,
+          newContentState,
+          'replace-text'
+        ))
+
+        console.log(newContentState);
+        return "replace-text"
+      }
+
+
+
+    }
+
+    if (e.key === "["){
+      console.log('good');
+    }
+    if (e.key === "]"){
+      const contentState = editorState.getCurrentContent();
+      const selectionState = editorState.getSelection();
+      const something = editorState.getCurrentContent().getBlockMap().first().text.split("")[0];
+      if(something === "["){        
+        setCardType('checkbox');
+
+        const currentSelectionState = editorState.getSelection();
+        const newContentState = Modifier.replaceText(
+          contentState,
+          // The text to replace, which is represented as a range with a start & end offset.
+          selectionState.merge( {
+            // The starting position of the range to be replaced.
+            anchorOffset: 0,
+            // The end position of the range to be replaced.
+            focusOffset: 1
+          }),
+          // The new string to replace the old string.
+          ""
+        );
+
+        setEditorState(EditorState.push(
+          editorState,
+          newContentState,
+          'replace-text'
+        ))
+
+        console.log(newContentState);
+        return "replace-text"
+      }
+
+      console.log(something);
     }
 
     //ctrl+z를 누를 때에, 얼럿도 띄우고 싶다면, 여기서 다시 함수를 작성해야 함.
@@ -222,7 +362,9 @@ const Card = ({uuid, createNewCard, updateId, sampleMarkup, findPrevCard, findNe
     }
 
     if(command === "split-block-new"){
-      createNewCard();
+      // alert(cardType);
+      // return 
+      createNewCard(cardType, indentCnt); //same thing or not!
     }
     
     if (command === "split-block"){
@@ -239,6 +381,11 @@ const Card = ({uuid, createNewCard, updateId, sampleMarkup, findPrevCard, findNe
       let start = selectionState.getStartOffset();
 
       if(start === 0){
+        if(cardType !== "paragraph"){
+          setCardType('paragraph')
+          return 
+        }
+
         if(!currentContent.hasText()){
           findPrevCard(uuid, 'delete');
         }else{
@@ -282,13 +429,34 @@ const Card = ({uuid, createNewCard, updateId, sampleMarkup, findPrevCard, findNe
   }
 
   const _onClose = (evt) => {
-    // evt.preventDefault();
     setEditorState(EditorState.forceSelection(editorState, SelectionState.createEmpty('')))
   }
 
   const _onColor = (evt) =>{
     evt.preventDefault();
     onChange(RichUtils.toggleInlineStyle(editorState, 'RED'));    
+  }
+
+  const makeParagraph = (evt) => {
+    setCardType('paragraph');
+  }
+
+  const makeCheckBox = (evt) => {
+    setCardType("checkbox");
+  }
+
+  const onClickCheckBox = (evt) => {
+    onCheckBox(uuid, 'checkbox', true);
+  }
+
+  const handleTab = (evt) => {
+    evt.preventDefault();
+  
+    if (evt.shiftKey) {
+      setIndentCnt(cnt => cnt - 1);
+    }else{
+      setIndentCnt(cnt => cnt + 1);
+    }
   }
   
   const styleMap = {
@@ -300,9 +468,30 @@ const Card = ({uuid, createNewCard, updateId, sampleMarkup, findPrevCard, findNe
     }
   };
 
+//          <div style={{width:30,}}><input type="checkbox" onClick={onClickCheckBox}/></div>          
+
+
   return (
-    <div>      
-      <div style={{padding:8, position:'relative',}} onClick={focusEditor}>
+    <div className="flex fdr" ref={editorWrapperRef}>      
+      <div style={{width: indentCnt * 30,}}>
+      </div>
+      <div className="flex fdr f1" style={{padding:8, position:'relative',}} onClick={focusEditor}>
+        {
+          cardType === "checkbox" &&
+
+          <label className="container">
+            <input type="checkbox"/>
+            <span className="checkmark"></span>
+          </label>
+        }
+
+        {
+          cardType === "bullet" && 
+          <div>
+            <div style={{fontSize:20, lineHeight: 1, width:20, height:15, marginTop:3,}}>•</div>
+          </div>
+        }
+
         {
           toolbox &&
           <div style={{position:'fixed', left:toolbox.left, top:toolbox.top, width:200, height:50, zIndex:10,}}>
@@ -313,9 +502,11 @@ const Card = ({uuid, createNewCard, updateId, sampleMarkup, findPrevCard, findNe
             <button onMouseDown={_onClose}>Exit</button>
             <button onMouseDown={_highlight}>highlight</button>    
             <button onMouseDown={_onMoveToEnd}>move focus</button>    
+            <button onMouseDown={makeCheckBox}>checkbox</button>    
+            <button onMouseDown={makeParagraph}>paragraph</button>    
           </div>
         }
-
+        
         <Editor
           customStyleMap={styleMap}
           placeholder="Tell a story..."
@@ -331,6 +522,7 @@ const Card = ({uuid, createNewCard, updateId, sampleMarkup, findPrevCard, findNe
           onUpArrow={keyEvent => {
             upHandler()
           }}
+          onTab={handleTab}
           onChange={onChange}
           keyBindingFn={myKeyBindingFn}
         />
