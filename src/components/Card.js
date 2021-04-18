@@ -2,18 +2,8 @@ import ReactDOM from 'react-dom';
 import {Editor, EditorState, EditorBlock, SelectionState, convertToRaw, RichUtils, ContentState, Modifier, convertFromRaw, convertFromHTML} from 'draft-js';
 import {getDefaultKeyBinding, KeyBindingUtil} from 'draft-js';
 import React, {useState, useEffect, useRef} from 'react';
-import { isElementOfType } from 'react-dom/test-utils';
 
 const {hasCommandModifier} = KeyBindingUtil;
-const MediaComponent = (props) => {
-  const {block, contentState} = props;
-  const {foo} = props.blockProps;
-  // Return a <figure> or some other content using this data.
-  return <div style={{ border: "1px solid #f00" }} className="flex fdr aic">
-    <input type="checkbox" style={{width:30, height:30,}}/>
-    <EditorBlock {...props} />
-  </div>
-}
 
 const Card = ({uuid, createNewCard, 
   updateId, 
@@ -23,7 +13,11 @@ const Card = ({uuid, createNewCard,
   findNextCard, 
   currentId, 
   onCheckBox, 
-  initCardType, initIndentCnt}) => {
+  initCardType, 
+  initIndentCnt,
+  focus,
+}) => {
+
   const editorRef = useRef();
   const editorWrapperRef = useRef();
 
@@ -35,25 +29,27 @@ const Card = ({uuid, createNewCard,
   }
 
   const [editorState, setEditorState] = useState(defaultEditorState);  
-  
-  /*
-  const blocksFromHTML = convertFromHTML(sampleMarkup);
-  const state = ContentState.createFromBlockArray(
-    blocksFromHTML.contentBlocks,
-    blocksFromHTML.entityMap,
-  );
-  */
-
-  // const initState = EditorState.createWithContent(state);
-  // const [editorState, setEditorState] = useState(initState);
-
+  const [loaded, setLoaded] = useState(false);
   const [hasEnded, setHasEnded] = useState(false);
   const [endCnt, setEndCnt] = useState(0);
   const [toolbox, setToolbox] = useState(null)    
   const [cardType, setCardType] = useState(initCardType || 'paragraph');
   const [indentCnt, setIndentCnt] = useState(initIndentCnt || 0);
   const [myTimeout, setMyTimeout] = useState(null);
-  const [timeState, setTimeState] = useState(null);
+
+
+  const contentState = editorState.getCurrentContent();
+  //여기서 진짜 궁금한건, contentState가 바뀌었냐지. 
+  let raw = convertToRaw(contentState)
+
+  const returnBlocks = raw.blocks.map(obj => {
+    return {
+      key: obj.key,
+      text: obj.text,
+      type: obj.type
+    }
+  })
+  const [abstract, setAbstract] = useState(returnBlocks);
 
   const upHandler = () => {
     const currentContent = editorState.getCurrentContent();
@@ -69,8 +65,6 @@ const Card = ({uuid, createNewCard,
     }
   }
 
-  //여기서 우리가 해야 할 것은.. 키보드를 리스닝 하는 것.
-
   const downHandler = (e) => {
     const currentContent = editorState.getCurrentContent();
     const length = currentContent.getPlainText().length;
@@ -84,6 +78,19 @@ const Card = ({uuid, createNewCard,
     }  
   }
   
+  const onKeyDown = (evt) => {
+    if(myTimeout) {
+      clearTimeout(myTimeout);
+      setMyTimeout(setTimeout(() => {
+        updateCurrentDraft();
+      }, 500))
+    }else{
+      setMyTimeout(setTimeout(() => {
+        updateCurrentDraft();
+      }, 1000));
+    }
+  }
+
   const someFunction = () => {
     const content = editorState.getCurrentContent();
     const blockMap = content.getBlockMap();
@@ -111,13 +118,19 @@ const Card = ({uuid, createNewCard,
     }
   }, [hasEnded])
 
+  useEffect(() => {
+    if(currentId === uuid){
+      return
+    }
 
-  // useEffect(() => {
-  //   //typing..
-  //   //
-  // }, [])
-   
-  
+    if(initContentState){
+      defaultEditorState = EditorState.createWithContent(convertFromRaw(initContentState));
+    }else{
+      defaultEditorState = EditorState.createEmpty()
+    }
+
+    setEditorState(defaultEditorState)
+  }, [initContentState])
 
   function getSelected() {
     var t = '';
@@ -131,11 +144,15 @@ const Card = ({uuid, createNewCard,
     return t;
   }
 
-  useEffect(() => {
+  useEffect(() => { 
+    //그냥 여기가 fire안되는게 더 현명할 듯.
+    //돌고 돌았지만..
+    //문제는 [editorState]를 하면 무조건 동작은 하고,
+    //처음에 이미 잘 랜러딩이 됐는데도 불구 하고 뭔가 자꾸 
+    
     var selection = editorState.getSelection();    
     if (selection.isCollapsed()) {
       setToolbox(null);
-      // setEditorState(EditorState.forceSelection(editorState, SelectionState.createEmpty('')))
     }else {
       try{
         var selected = getSelected();
@@ -147,22 +164,41 @@ const Card = ({uuid, createNewCard,
       }
     }
 
-    //두개의 스테이트가 바뀌었었는지를 체크 하자...
-    //내가 키보드를 바뀔 때 마다아~~
-    //스테이트가 바뀔 떄마다아~ 
-    //키보드 바뀔 떄마다아~
+    const contentState = editorState.getCurrentContent();
+    //여기서 진짜 궁금한건, contentState가 바뀌었냐지. 
+    let raw = convertToRaw(contentState)
+
+    const returnBlocks = raw.blocks.map(obj => {
+      return {
+        key: obj.key,
+        text: obj.text,
+        type: obj.type
+      }
+    })
     
-
-
-    // 에디터 스테이트가 바뀔 때에..
-
-
-
-
-
-
-
+    if(compareTwoArray(abstract,returnBlocks)){
+      console.log('same so no trigger');
+      return ;
+    }
   }, [editorState])
+
+  const compareTwoArray = (array1,array2) => {
+    // console.log('compare');
+    // console.log(array1);
+    // console.log(array2);
+    if(!array1){
+      return false;
+    }
+
+    if(!array2){
+      return false;
+    }
+
+    if(array1[0].key === array2[0].key && array1[0].text === array2[0].text) {
+      return true
+    }
+    // return array1.length === array2.length && array1.every(function(value, index) { return value === array2[index]})
+  }
 
   useEffect(() => {
     if(endCnt >= 1){
@@ -178,7 +214,9 @@ const Card = ({uuid, createNewCard,
   }, [endCnt])
 
   useEffect(() => {
-    focusEditor();
+    if(focus){
+      focusEditor();
+    }
   }, [])
 
   useEffect(() => {
@@ -193,9 +231,10 @@ const Card = ({uuid, createNewCard,
   }
 
   const focusEditor = () => {
+    console.log('focus editor');
     if(editorRef.current){
       editorRef.current.focus();
-      editorWrapperRef.current.scrollIntoView();
+      // editorWrapperRef.current.focus();
     }
   }
 
@@ -207,21 +246,8 @@ const Card = ({uuid, createNewCard,
     }
   }
 
-  function myBlockRenderer(contentBlock) {
-    const type = contentBlock.getType();
-    if (type === 'atomic') {
-      return {
-        component: MediaComponent,
-        editable: true,
-        props: {
-          foo: 'bar',
-          done: true,
-        },
-      };
-    }
-  }
-
   const updateCurrentDraft = () => {
+    console.log('go---------------------');
     const contentState = editorState.getCurrentContent();
     let raw = convertToRaw(contentState)
     raw.cardType = cardType
@@ -231,18 +257,7 @@ const Card = ({uuid, createNewCard,
   }
 
   const myKeyBindingFn = (e) => {
-
-    if(myTimeout) {
-      clearTimeout(myTimeout);
-      setMyTimeout(setTimeout(() => {
-        updateCurrentDraft();
-      }, 500))
-    }else{
-      setMyTimeout(setTimeout(() => {
-        updateCurrentDraft();
-      }, 1000));
-    }
-
+    //딱 그 글자를 하는거라서 그런가?
     if (e.keyCode === 83 /* `S` key */ && hasCommandModifier(e)) {
 
       const contentState = editorState.getCurrentContent();
@@ -468,14 +483,13 @@ const Card = ({uuid, createNewCard,
     }
   };
 
-//          <div style={{width:30,}}><input type="checkbox" onClick={onClickCheckBox}/></div>          
-
-
   return (
-    <div className="flex fdr" ref={editorWrapperRef}>      
+    <div className="flex fdr" ref={editorWrapperRef}>     
       <div style={{width: indentCnt * 30,}}>
       </div>
-      <div className="flex fdr f1" style={{padding:8, position:'relative',}} onClick={focusEditor}>
+      <div className="flex fdr f1" style={{padding:8, position:'relative',}} 
+      onKeyDown={onKeyDown}
+      onClick={focusEditor}>
         {
           cardType === "checkbox" &&
 
@@ -484,7 +498,6 @@ const Card = ({uuid, createNewCard,
             <span className="checkmark"></span>
           </label>
         }
-
         {
           cardType === "bullet" && 
           <div>
@@ -513,9 +526,7 @@ const Card = ({uuid, createNewCard,
           ref={editorRef}
           handleKeyCommand={handleKeyCommand}
           blockStyleFn={myBlockStyleFn} 
-          blockRendererFn={myBlockRenderer} 
           editorState={editorState}
-          onEscape={keyEvent=>console.log('Escape just  pressed')}
           onDownArrow={keyEvent => {
             downHandler(keyEvent)
           }}
