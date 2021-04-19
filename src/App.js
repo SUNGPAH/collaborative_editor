@@ -25,16 +25,11 @@ function App() {
   }, [])
 
   useEffect(() => {
-    console.log('--delta---');
-    console.log(delta);
     if(!delta){
       return
     }
 
     const treeCandidate = delta.tree ? delta.tree : tree
-
-    //tree가 업데이트가 되는 경우에는, 새로운 섹션이 나타나게 됨. 내가 동작을 하고 있는게 아니라면!
-
     const _list = treeCandidate.map((treeShallowObj) => {        
       const obj = delta.changes.filter(obj => obj.id === treeShallowObj.id)[0];
 
@@ -134,6 +129,26 @@ function App() {
       const copied = [...tree];
       copied.splice(index,1);
       setTree(copied);
+
+      //db에 전달을 해주고 싶다.
+      //ㅋㅋ..
+      //변화를 뭐뭐 주어야 하나.
+      
+      // const _tree = []; //굿 이러면 다 지워짐 ㅋㅋ
+      // 이것 뿐만 아니라, 다른 것도 지워줘야 함. 
+        //아이템 자체도 지워줘야함.
+        //은 좀 나중에 지울까? 
+        // --- ?
+      db
+      .collection('document')
+      .doc('someDocumentId')
+      .collection('blocks')
+      .doc('tree')
+      .set({tree:copied})
+      .then((ref) => {
+        console.log('tree saved');
+      })
+
     }
   }
 
