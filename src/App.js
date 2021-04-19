@@ -1,5 +1,4 @@
 import React, {useEffect, useState} from 'react';
-import ReactDOM from 'react-dom';
 import Card from './components/Card';
 import './App.css';
 import {db, firebase} from './firebase';

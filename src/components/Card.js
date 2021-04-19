@@ -1,6 +1,6 @@
-import {Editor, EditorState, SelectionState, convertToRaw, RichUtils, ContentState, Modifier, convertFromRaw, convertFromHTML} from 'draft-js';
+import {Editor, EditorState, SelectionState, convertToRaw, RichUtils, Modifier, convertFromRaw} from 'draft-js';
 import {getDefaultKeyBinding, KeyBindingUtil} from 'draft-js';
-import React, {useState, useEffect, useRef, useCallback} from 'react';
+import React, {useState, useEffect, useRef} from 'react';
 
 const {hasCommandModifier} = KeyBindingUtil;
 
@@ -27,6 +27,7 @@ const Card = ({uuid, createNewCard,
   }
 
   const [editorState, setEditorState] = useState(defaultEditorState);  
+  const [dataForDelta, setDataForDelta] = useState(null);
   const [hasEnded, setHasEnded] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [endCnt, setEndCnt] = useState(0);
@@ -34,17 +35,6 @@ const Card = ({uuid, createNewCard,
   const [cardType, setCardType] = useState(initCardType || 'paragraph');
   const [indentCnt, setIndentCnt] = useState(initIndentCnt || 0);
   const [myTimeout, setMyTimeout] = useState(null);
-  const contentState = editorState.getCurrentContent();
-  let raw = convertToRaw(contentState)
-
-  const returnBlocks = raw.blocks.map(obj => {
-    return {
-      key: obj.key,
-      text: obj.text,
-      type: obj.type
-    }
-  })
-  const [abstract, setAbstract] = useState(returnBlocks);
 
   const upHandler = () => {
     const currentContent = editorState.getCurrentContent();
@@ -88,12 +78,9 @@ const Card = ({uuid, createNewCard,
       return
     }
 
-    if(evt.key === "Shift" || evt.key === "Escape" || evt.key === "Command"){
+    if(evt.key === "Shift" || evt.key === "Escape" || evt.key === "Command" || evt.key === "Meta"){
       return
     }
-
-    const contentState = editorState.getCurrentContent();
-    let raw = convertToRaw(contentState)
     
     if(myTimeout) {
       clearTimeout(myTimeout);
@@ -116,6 +103,10 @@ const Card = ({uuid, createNewCard,
     if(evt.key === "ArrowDown"){
       downHandler(evt)
       return
+    }
+
+    if(evt.key === "Tab"){
+      handleTab(evt);
     }
   }
 
@@ -162,7 +153,6 @@ const Card = ({uuid, createNewCard,
 
     console.log('initIndentCnt');
     setIndentCnt(initIndentCnt);
-
   }, [initIndentCnt])
 
   function getSelected() {
@@ -177,12 +167,7 @@ const Card = ({uuid, createNewCard,
     return t;
   }
 
-  useEffect(() => { 
-    //그냥 여기가 fire안되는게 더 현명할 듯.
-    //돌고 돌았지만..
-    //문제는 [editorState]를 하면 무조건 동작은 하고,
-    //처음에 이미 잘 랜러딩이 됐는데도 불구 하고 뭔가 자꾸 
-    
+  useEffect(() => {     
     var selection = editorState.getSelection();    
     if (selection.isCollapsed()) {
       setToolbox(null);
@@ -197,40 +182,58 @@ const Card = ({uuid, createNewCard,
       }
     }
 
-    const contentState = editorState.getCurrentContent();
-    //여기서 진짜 궁금한건, contentState가 바뀌었냐지. 
-    let raw = convertToRaw(contentState)
-
-    const returnBlocks = raw.blocks.map(obj => {
-      return {
-        key: obj.key,
-        text: obj.text,
-        type: obj.type
-      }
-    })
-    
-    if(compareTwoArray(abstract,returnBlocks)){
-      // console.log('same so no trigger');
-      return ;
+    const data = convertToRaw(editorState.getCurrentContent()).blocks[0]
+    const delta = {
+      text: data.text,
+      inlineStyleRanges: data.inlineStyleRanges,
     }
+
+    if(compareDelta(delta, dataForDelta)){
+      return
+    }
+
+    setDataForDelta(delta);
+
   }, [editorState])
 
-  const compareTwoArray = (array1,array2) => {
-    // console.log('compare');
-    // console.log(array1);
-    // console.log(array2);
-    if(!array1){
-      return false;
+  useEffect(() => {
+    console.log('current content');
+    console.log(dataForDelta);
+  }, [dataForDelta])
+
+  const compareArray = (arr1, arr2) => {
+    let same = true;
+    arr1.forEach((obj, index) => {
+     Object.keys(arr1[index]).forEach(key => {
+        if(!arr2[index]){
+          return false
+        }
+
+        if(obj[key] === arr2[index][key]){
+          console.log('same!');
+        }else{
+          same = false
+        }
+      })
+    })
+
+    return same
+  }
+
+  const compareDelta = (delta1, delta2) => {
+    if(!delta1){
+      return
     }
 
-    if(!array2){
-      return false;
+    if(!delta2){
+      return
     }
 
-    if(array1[0].key === array2[0].key && array1[0].text === array2[0].text) {
-      return true
+    if(delta1.text !== delta2.text){
+      return false
     }
-    // return array1.length === array2.length && array1.every(function(value, index) { return value === array2[index]})
+
+    return compareArray(delta1.inlineStyleRanges, delta2.inlineStyleRanges)
   }
 
   useEffect(() => {
@@ -279,14 +282,14 @@ const Card = ({uuid, createNewCard,
     }
   }
 
-  const updateCurrentDraft = useCallback(() => {
+  const updateCurrentDraft = () => {
     const contentState = editorState.getCurrentContent();
     let raw = convertToRaw(contentState)
     raw.cardType = cardType
     raw.id = uuid
     raw.indentCnt = indentCnt;
     updateData(uuid, raw);
-  }, [editorState])
+  };
 
   const myKeyBindingFn = (e) => {
     if (e.keyCode === 13){
@@ -313,7 +316,6 @@ const Card = ({uuid, createNewCard,
       if(something === "-"){        
         setCardType('bullet');
 
-        const currentSelectionState = editorState.getSelection();
         const newContentState = Modifier.replaceText(
           contentState,
           // The text to replace, which is represented as a range with a start & end offset.
@@ -340,7 +342,7 @@ const Card = ({uuid, createNewCard,
 
     if (e.key === "["){
     }
-    
+
     if (e.key === "]"){
       const contentState = editorState.getCurrentContent();
       const selectionState = editorState.getSelection();
@@ -348,7 +350,6 @@ const Card = ({uuid, createNewCard,
       if(something === "["){        
         setCardType('checkbox');
 
-        const currentSelectionState = editorState.getSelection();
         const newContentState = Modifier.replaceText(
           contentState,
           // The text to replace, which is represented as a range with a start & end offset.
@@ -436,19 +437,6 @@ const Card = ({uuid, createNewCard,
     onChange(RichUtils.toggleInlineStyle(editorState, 'BOLD'));
   }
 
-  const _onBlockQuote = () => {
-    onChange(RichUtils.toggleBlockType(editorState, 'blockquote'));
-  }
-
-  const _onAtomic = () => {
-    onChange(RichUtils.toggleBlockType(editorState, 'atomic'));
-  }
-  
-  const _onMoveToEnd = (evt) => {
-    evt.preventDefault();
-    setEditorState(editorState => EditorState.moveFocusToEnd(editorState));
-  }
-
   const _highlight = (evt) => {
     evt.preventDefault();
     onChange(RichUtils.toggleInlineStyle(editorState, 'HIGHLIGHT'));
@@ -510,7 +498,6 @@ const Card = ({uuid, createNewCard,
           <div style={{position:'fixed', left:toolbox.left, top:toolbox.top, width:200, height:50, zIndex:10,}} className="flex fdr p-4p">
             <button onMouseDown={_onBoldClick}>Bold</button>
             <button onMouseDown={_onColor}>Red</button>
-            <button onClick={_onAtomic}>Atomic</button>
             <button onMouseDown={_onClose}>Exit</button>
             <button onMouseDown={_highlight}>highlight</button>    
           </div>
@@ -523,7 +510,6 @@ const Card = ({uuid, createNewCard,
           handleKeyCommand={handleKeyCommand}
           blockStyleFn={myBlockStyleFn} 
           editorState={editorState}
-          onTab={handleTab}
           onChange={onChange}
           keyBindingFn={myKeyBindingFn}
         />
