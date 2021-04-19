@@ -1,5 +1,4 @@
-import ReactDOM from 'react-dom';
-import {Editor, EditorState, EditorBlock, SelectionState, convertToRaw, RichUtils, ContentState, Modifier, convertFromRaw, convertFromHTML} from 'draft-js';
+import {Editor, EditorState, SelectionState, convertToRaw, RichUtils, ContentState, Modifier, convertFromRaw, convertFromHTML} from 'draft-js';
 import {getDefaultKeyBinding, KeyBindingUtil} from 'draft-js';
 import React, {useState, useEffect, useRef, useCallback} from 'react';
 
@@ -30,6 +29,7 @@ const Card = ({uuid, createNewCard,
   }
 
   const [editorState, setEditorState] = useState(defaultEditorState);  
+  const [snapshotEditorState, setSnapshotEditorState] = useState(defaultEditorState);
   const [loaded, setLoaded] = useState(false);
   const [hasEnded, setHasEnded] = useState(false);
   const [endCnt, setEndCnt] = useState(0);
@@ -37,10 +37,7 @@ const Card = ({uuid, createNewCard,
   const [cardType, setCardType] = useState(initCardType || 'paragraph');
   const [indentCnt, setIndentCnt] = useState(initIndentCnt || 0);
   const [myTimeout, setMyTimeout] = useState(null);
-
-
   const contentState = editorState.getCurrentContent();
-  //여기서 진짜 궁금한건, contentState가 바뀌었냐지. 
   let raw = convertToRaw(contentState)
 
   const returnBlocks = raw.blocks.map(obj => {
@@ -79,17 +76,18 @@ const Card = ({uuid, createNewCard,
     }  
   }
   
-  const onKeyUp = (evt) => {
-    console.log(evt.key);
+  const onKeyUp = (evt) => {    
+    if(evt.key === 'ArrowUp' || evt.key === "ArrowDown"){
+      return
+    }
 
-    //예도 아니었어. 
-    //온 키다운은, 키업으로 해야겠음.
+    if(evt.key === 'ArrowLeft' || evt.key === "ArrowRight"){
+      return
+    }
+
     const contentState = editorState.getCurrentContent();
     let raw = convertToRaw(contentState)
-    console.log('onkey down');
-    console.log(raw.blocks[0].text);
-
-
+    
     if(myTimeout) {
       clearTimeout(myTimeout);
       setMyTimeout(setTimeout(() => {
