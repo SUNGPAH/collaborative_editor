@@ -5,13 +5,17 @@ import './App.css';
 import {db, firebaseApp, firebase} from './firebase';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import {useParams} from "react-router-dom";
+
 
 function App() {
+  
   const [tree, setTree] = useState([]);
   const [delta, setDelta] = useState(null);
   const [currentId, setCurrentId] = useState(null);
   const [loaded, setLoaded] = useState(false);
-  const userId = `5`;
+  // const userId = `5`;
+  const { userId } = useParams();
 
   useEffect(() => {
     const blocksRef = db.collection('document').doc('someDocumentId').collection('blocks')
@@ -19,7 +23,7 @@ function App() {
       const changes = snapshot.docChanges().map(change => change.doc.data());
       const _tree = changes.find(change => change.tree);
       const _changes = changes.filter(change => !change.tree)
-            
+
       setDelta({
         tree: _tree ? _tree.tree : null,
         changes: _changes,
@@ -63,7 +67,6 @@ function App() {
     })
     
     toast(`new delta ${delta.updater}`);
-    console.log(_list);
     setTree(_list);
 
     if(!loaded){
