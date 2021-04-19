@@ -27,8 +27,8 @@ const Card = ({uuid, createNewCard,
   }
 
   const [editorState, setEditorState] = useState(defaultEditorState);  
-  const [loaded, setLoaded] = useState(false);
   const [hasEnded, setHasEnded] = useState(false);
+  const [loaded, setLoaded] = useState(false);
   const [endCnt, setEndCnt] = useState(0);
   const [toolbox, setToolbox] = useState(null)    
   const [cardType, setCardType] = useState(initCardType || 'paragraph');
@@ -128,6 +128,10 @@ const Card = ({uuid, createNewCard,
   }, [hasEnded])
 
   useEffect(() => {
+    setLoaded(true);
+  }, [])
+
+  useEffect(() => {
     if(currentId === uuid){
       return
     }
@@ -140,6 +144,26 @@ const Card = ({uuid, createNewCard,
 
     setEditorState(defaultEditorState)
   }, [initContentState])
+
+  useEffect(() => {
+    if(!loaded){
+      return false;
+    }
+
+    console.log('init card type');
+    setCardType(initCardType);
+
+  }, [initCardType])
+
+  useEffect(() => {
+    if(!loaded){
+      return false;
+    }
+
+    console.log('initIndentCnt');
+    setIndentCnt(initIndentCnt);
+
+  }, [initIndentCnt])
 
   function getSelected() {
     var t = '';
@@ -261,27 +285,10 @@ const Card = ({uuid, createNewCard,
     raw.cardType = cardType
     raw.id = uuid
     raw.indentCnt = indentCnt;
-    console.log(raw);
     updateData(uuid, raw);
   }, [editorState])
 
   const myKeyBindingFn = (e) => {
-    //딱 그 글자를 하는거라서 그런가?
-    if (e.keyCode === 83 /* `S` key */ && hasCommandModifier(e)) {
-
-      const contentState = editorState.getCurrentContent();
-      console.log(contentState);
-      let raw = convertToRaw(contentState)
-      console.log('raw..');
-      console.log(raw);
-      raw.cardType = cardType
-      raw.id = uuid
-      raw.indentCnt = indentCnt;
-
-      updateData(uuid, raw);
-      return 'myeditor-save';
-    }
-
     if (e.keyCode === 13){
       return 'split-block-new'
     }
@@ -329,14 +336,11 @@ const Card = ({uuid, createNewCard,
         console.log(newContentState);
         return "replace-text"
       }
-
-
-
     }
 
     if (e.key === "["){
-      console.log('good');
     }
+    
     if (e.key === "]"){
       const contentState = editorState.getCurrentContent();
       const selectionState = editorState.getSelection();

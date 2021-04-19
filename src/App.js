@@ -2,19 +2,16 @@ import React, {useEffect, useState} from 'react';
 import ReactDOM from 'react-dom';
 import Card from './components/Card';
 import './App.css';
-import {db, firebaseApp, firebase} from './firebase';
+import {db, firebase} from './firebase';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import {useParams} from "react-router-dom";
 
-
 function App() {
-  
   const [tree, setTree] = useState([]);
   const [delta, setDelta] = useState(null);
   const [currentId, setCurrentId] = useState(null);
   const [loaded, setLoaded] = useState(false);
-  // const userId = `5`;
   const { userId } = useParams();
 
   useEffect(() => {
@@ -27,7 +24,7 @@ function App() {
       setDelta({
         tree: _tree ? _tree.tree : null,
         changes: _changes,
-        updater: _tree ? _tree.updater : _changes[0].updater ,
+        updater: _tree ? _tree.updater : (_changes[0] ? _changes[0].updater : null) ,
       })
     })
   }, [])
@@ -41,25 +38,39 @@ function App() {
       toast.success("pass this update because this user updates");
       return
     }
+    console.log('-------------------------');
+    console.log(delta);
 
     const treeCandidate = delta.tree ? delta.tree : tree    
     const _list = treeCandidate.map((treeShallowObj) => {        
       const obj = delta.changes.filter(obj => obj.id === treeShallowObj.id)[0];
 
       if(obj){        
-        if(loaded){
-          
-        }else{
+        if(!loaded){
           treeShallowObj.initContentState = obj.content
           treeShallowObj.initIndentCnt = obj.content.indentCnt
           treeShallowObj.initCardType = obj.content.cardType    
-        }
-
-        if(obj.updater === userId){
         }else{
-          treeShallowObj.initContentState = obj.content
-          treeShallowObj.initIndentCnt = obj.content.indentCnt
-          treeShallowObj.initCardType = obj.content.cardType  
+          if(obj.updater===userId){
+            console.log('updater id is userId');
+            //so pass the update!
+          } else{
+            treeShallowObj.initContentState = obj.content
+            treeShallowObj.initIndentCnt = obj.content.indentCnt
+            treeShallowObj.initCardType = obj.content.cardType  
+          }         
+        }
+      }else{
+        //여긴 이미 있는 기존에 렌더링 되었던 tree에서 찾아서 가져오는 것 (그대로 복사)  
+        const sth = tree.filter(obj => obj.id === treeShallowObj.id)[0];
+        if(sth){
+          console.log(sth);
+          treeShallowObj.initContentState = sth.initContentState
+          treeShallowObj.initIndentCnt = sth.initIndentCnt
+          treeShallowObj.initCardType = sth.initCardType
+          // console.log('existing..'); 
+        }else{
+          // console.log('no obj');
         }
       }
 
