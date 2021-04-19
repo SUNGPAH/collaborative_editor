@@ -1,7 +1,7 @@
 import ReactDOM from 'react-dom';
 import {Editor, EditorState, EditorBlock, SelectionState, convertToRaw, RichUtils, ContentState, Modifier, convertFromRaw, convertFromHTML} from 'draft-js';
 import {getDefaultKeyBinding, KeyBindingUtil} from 'draft-js';
-import React, {useState, useEffect, useRef} from 'react';
+import React, {useState, useEffect, useRef, useCallback} from 'react';
 
 const {hasCommandModifier} = KeyBindingUtil;
 
@@ -18,6 +18,7 @@ const Card = ({uuid, createNewCard,
   focus,
 }) => {
 
+  //update될 때에 트리도 바꿔줘야 함..
   const editorRef = useRef();
   const editorWrapperRef = useRef();
 
@@ -78,7 +79,17 @@ const Card = ({uuid, createNewCard,
     }  
   }
   
-  const onKeyDown = (evt) => {
+  const onKeyUp = (evt) => {
+    console.log(evt.key);
+
+    //예도 아니었어. 
+    //온 키다운은, 키업으로 해야겠음.
+    const contentState = editorState.getCurrentContent();
+    let raw = convertToRaw(contentState)
+    console.log('onkey down');
+    console.log(raw.blocks[0].text);
+
+
     if(myTimeout) {
       clearTimeout(myTimeout);
       setMyTimeout(setTimeout(() => {
@@ -157,7 +168,7 @@ const Card = ({uuid, createNewCard,
       try{
         var selected = getSelected();
         var rect = selected.getRangeAt(0).getBoundingClientRect();
-        setToolbox({left: rect.left, top: rect.top - 50, width: rect.width})
+        setToolbox({left: rect.left, top: rect.top - 60, width: rect.width})
       }catch(e){
         console.log('error');
         setToolbox(null);
@@ -177,7 +188,7 @@ const Card = ({uuid, createNewCard,
     })
     
     if(compareTwoArray(abstract,returnBlocks)){
-      console.log('same so no trigger');
+      // console.log('same so no trigger');
       return ;
     }
   }, [editorState])
@@ -246,21 +257,22 @@ const Card = ({uuid, createNewCard,
     }
   }
 
-  const updateCurrentDraft = () => {
-    console.log('go---------------------');
+  const updateCurrentDraft = useCallback(() => {
     const contentState = editorState.getCurrentContent();
     let raw = convertToRaw(contentState)
     raw.cardType = cardType
     raw.id = uuid
     raw.indentCnt = indentCnt;
+    console.log(raw);
     updateData(uuid, raw);
-  }
+  }, [editorState])
 
   const myKeyBindingFn = (e) => {
     //딱 그 글자를 하는거라서 그런가?
     if (e.keyCode === 83 /* `S` key */ && hasCommandModifier(e)) {
 
       const contentState = editorState.getCurrentContent();
+      console.log(contentState);
       let raw = convertToRaw(contentState)
       console.log('raw..');
       console.log(raw);
@@ -488,7 +500,7 @@ const Card = ({uuid, createNewCard,
       <div style={{width: indentCnt * 30,}}>
       </div>
       <div className="flex fdr f1" style={{padding:8, position:'relative',}} 
-      onKeyDown={onKeyDown}
+      onKeyUp={onKeyUp}
       onClick={focusEditor}>
         {
           cardType === "checkbox" &&
@@ -507,16 +519,12 @@ const Card = ({uuid, createNewCard,
 
         {
           toolbox &&
-          <div style={{position:'fixed', left:toolbox.left, top:toolbox.top, width:200, height:50, zIndex:10,}}>
+          <div style={{position:'fixed', left:toolbox.left, top:toolbox.top, width:200, height:50, zIndex:10,}} className="flex fdr p-4p">
             <button onMouseDown={_onBoldClick}>Bold</button>
             <button onMouseDown={_onColor}>Red</button>
-            <button onClick={_onBlockQuote}>blockQuote</button>
             <button onClick={_onAtomic}>Atomic</button>
             <button onMouseDown={_onClose}>Exit</button>
             <button onMouseDown={_highlight}>highlight</button>    
-            <button onMouseDown={_onMoveToEnd}>move focus</button>    
-            <button onMouseDown={makeCheckBox}>checkbox</button>    
-            <button onMouseDown={makeParagraph}>paragraph</button>    
           </div>
         }
         

@@ -3,13 +3,16 @@ import ReactDOM from 'react-dom';
 import Card from './components/Card';
 import './App.css';
 import {db, firebaseApp, firebase} from './firebase';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 function App() {
   const [tree, setTree] = useState([]);
   const [delta, setDelta] = useState(null);
   const [currentId, setCurrentId] = useState(null);
-  const sampleMarkup = ''
-  
+  const [loaded, setLoaded] = useState(false);
+  const userId = `5`;
+
   useEffect(() => {
     const blocksRef = db.collection('document').doc('someDocumentId').collection('blocks')
     blocksRef.onSnapshot((snapshot) => {
@@ -19,7 +22,8 @@ function App() {
 
       setDelta({
         tree: _tree ? _tree.tree : null,
-        changes: _changes
+        changes: _changes,
+        updater: _tree ? _tree.updater : null,
       })
     })
   }, [])
@@ -29,17 +33,42 @@ function App() {
       return
     }
 
-    const treeCandidate = delta.tree ? delta.tree : tree
+    if(loaded && delta.updater === userId){
+      toast.success("pass this update because this user updates");
+      return
+    }
+
+    const treeCandidate = delta.tree ? delta.tree : tree    
     const _list = treeCandidate.map((treeShallowObj) => {        
       const obj = delta.changes.filter(obj => obj.id === treeShallowObj.id)[0];
 
-      if(obj){
-        treeShallowObj.initContentState = obj.content
+      if(obj){        
+        if(loaded){
+          
+        }else{
+          treeShallowObj.initContentState = obj.content
+          treeShallowObj.initIndentCnt = obj.content.indentCnt
+          treeShallowObj.initCardType = obj.content.cardType    
+        }
+
+        if(obj.updater === userId){
+        }else{
+          treeShallowObj.initContentState = obj.content
+          treeShallowObj.initIndentCnt = obj.content.indentCnt
+          treeShallowObj.initCardType = obj.content.cardType  
+        }
       }
+
       return treeShallowObj
     })
-      
+    
+    toast("new delta");
+    console.log(_list);
     setTree(_list);
+
+    if(!loaded){
+      setLoaded(true);
+    }
   }, [delta])  
 
   const add = (cardType, indentCnt) => {
@@ -47,7 +76,6 @@ function App() {
 
     let newTree
     if(index === -1){
-      
       newTree = [
         ...tree, {
           id: `new_object_${Math.random()}`,
@@ -79,17 +107,20 @@ function App() {
       if(copiedTreeObj.focus){
         delete copiedTreeObj.focus
       }
+
+      if(copiedTreeObj.initContentState){
+        delete copiedTreeObj.initContentState
+      }
+
       return copiedTreeObj
     })
-
-    // return 
 
     db
     .collection('document')
     .doc('someDocumentId')
     .collection('blocks')
     .doc('tree')
-    .set({tree:_tree})
+    .set({tree:_tree, updater: userId})
     .then((ref) => {
       console.log('tree saved');
     })
@@ -100,6 +131,8 @@ function App() {
   }
 
   const updateData = (id, raw) => {
+    // toast.info(raw.content);
+    
     db
     .collection('document')
     .doc('someDocumentId')
@@ -107,9 +140,11 @@ function App() {
     .doc(id).set({
       id: id,
       content: raw,
-      created: firebase.firestore.Timestamp.now().seconds
+      created: firebase.firestore.Timestamp.now().seconds,
+      updater: userId
     })
     .then((ref) => {
+      console.log(raw);
     })
   }
 
@@ -130,15 +165,6 @@ function App() {
       copied.splice(index,1);
       setTree(copied);
 
-      //db에 전달을 해주고 싶다.
-      //ㅋㅋ..
-      //변화를 뭐뭐 주어야 하나.
-      
-      // const _tree = []; //굿 이러면 다 지워짐 ㅋㅋ
-      // 이것 뿐만 아니라, 다른 것도 지워줘야 함. 
-        //아이템 자체도 지워줘야함.
-        //은 좀 나중에 지울까? 
-        // --- ?
       db
       .collection('document')
       .doc('someDocumentId')
@@ -186,6 +212,7 @@ function App() {
         focus={obj.focus}
         />)
       }
+      <ToastContainer />
     </div>
   );
 }
