@@ -19,11 +19,11 @@ function App() {
       const changes = snapshot.docChanges().map(change => change.doc.data());
       const _tree = changes.find(change => change.tree);
       const _changes = changes.filter(change => !change.tree)
-
+            
       setDelta({
         tree: _tree ? _tree.tree : null,
         changes: _changes,
-        updater: _tree ? _tree.updater : null,
+        updater: _tree ? _tree.updater : _changes[0].updater ,
       })
     })
   }, [])
@@ -32,7 +32,7 @@ function App() {
     if(!delta){
       return
     }
-
+    
     if(loaded && delta.updater === userId){
       toast.success("pass this update because this user updates");
       return
@@ -62,7 +62,7 @@ function App() {
       return treeShallowObj
     })
     
-    toast("new delta");
+    toast(`new delta ${delta.updater}`);
     console.log(_list);
     setTree(_list);
 
@@ -132,7 +132,7 @@ function App() {
 
   const updateData = (id, raw) => {
     // toast.info(raw.content);
-    
+
     db
     .collection('document')
     .doc('someDocumentId')

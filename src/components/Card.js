@@ -11,13 +11,11 @@ const Card = ({uuid, createNewCard,
   findPrevCard, 
   findNextCard, 
   currentId, 
-  onCheckBox, 
   initCardType, 
   initIndentCnt,
   focus,
 }) => {
 
-  //update될 때에 트리도 바꿔줘야 함..
   const editorRef = useRef();
   const editorWrapperRef = useRef();
 
@@ -29,7 +27,6 @@ const Card = ({uuid, createNewCard,
   }
 
   const [editorState, setEditorState] = useState(defaultEditorState);  
-  const [snapshotEditorState, setSnapshotEditorState] = useState(defaultEditorState);
   const [loaded, setLoaded] = useState(false);
   const [hasEnded, setHasEnded] = useState(false);
   const [endCnt, setEndCnt] = useState(0);
@@ -70,18 +67,28 @@ const Card = ({uuid, createNewCard,
     let start = selectionState.getStartOffset();
 
     if(length === start){
+      console.log('ended yet');
       setHasEnded(Math.random());
     }else{
+      console.log('not ended yet');
       setHasEnded(false);
     }  
   }
   
-  const onKeyUp = (evt) => {    
-    if(evt.key === 'ArrowUp' || evt.key === "ArrowDown"){
+  const onKeyUp = (evt) => {   
+    if(evt.key === "ArrowUp"){
+      return;
+    }
+
+    if(evt.key === "ArrowDown"){
       return
     }
 
     if(evt.key === 'ArrowLeft' || evt.key === "ArrowRight"){
+      return
+    }
+
+    if(evt.key === "Shift" || evt.key === "Escape" || evt.key === "Command"){
       return
     }
 
@@ -100,23 +107,16 @@ const Card = ({uuid, createNewCard,
     }
   }
 
-  const someFunction = () => {
-    const content = editorState.getCurrentContent();
-    const blockMap = content.getBlockMap();
-    const key = blockMap.last().getKey();
-    // const length = blockMap.last().getLength();
+  const onKeyDown = (evt) => {
+    if(evt.key === "ArrowUp"){
+      upHandler()
+      return;
+    }
 
-    const selection = new SelectionState({
-      anchorKey: key,
-      anchorOffset: 3,
-      focusKey: key,
-      focusOffset: 3,
-    });
-
-    const afterSelectionMove = EditorState.acceptSelection(editorState, selection)
-    const newEditorState =  EditorState.forceSelection(afterSelectionMove, afterSelectionMove.getSelection());
-    setEditorState(newEditorState)
-    return
+    if(evt.key === "ArrowDown"){
+      downHandler(evt)
+      return
+    }
   }
 
   useEffect(() => {
@@ -240,7 +240,7 @@ const Card = ({uuid, createNewCard,
   }
 
   const focusEditor = () => {
-    console.log('focus editor');
+    // console.log('focus editor');
     if(editorRef.current){
       editorRef.current.focus();
       // editorWrapperRef.current.focus();
@@ -377,9 +377,6 @@ const Card = ({uuid, createNewCard,
   
   const handleKeyCommand = (command, editorState) => {
     console.log(command);
-    if(command === "test"){
-      someFunction();
-    }
     
     if (command === 'myeditor-save'){
       alert('saved! - I need to define custom method');
@@ -462,18 +459,6 @@ const Card = ({uuid, createNewCard,
     onChange(RichUtils.toggleInlineStyle(editorState, 'RED'));    
   }
 
-  const makeParagraph = (evt) => {
-    setCardType('paragraph');
-  }
-
-  const makeCheckBox = (evt) => {
-    setCardType("checkbox");
-  }
-
-  const onClickCheckBox = (evt) => {
-    onCheckBox(uuid, 'checkbox', true);
-  }
-
   const handleTab = (evt) => {
     evt.preventDefault();
   
@@ -499,6 +484,7 @@ const Card = ({uuid, createNewCard,
       </div>
       <div className="flex fdr f1" style={{padding:8, position:'relative',}} 
       onKeyUp={onKeyUp}
+      onKeyDown={onKeyDown}
       onClick={focusEditor}>
         {
           cardType === "checkbox" &&
@@ -533,12 +519,6 @@ const Card = ({uuid, createNewCard,
           handleKeyCommand={handleKeyCommand}
           blockStyleFn={myBlockStyleFn} 
           editorState={editorState}
-          onDownArrow={keyEvent => {
-            downHandler(keyEvent)
-          }}
-          onUpArrow={keyEvent => {
-            upHandler()
-          }}
           onTab={handleTab}
           onChange={onChange}
           keyBindingFn={myKeyBindingFn}
