@@ -109,3 +109,22 @@ span{
   -ms-transform: rotate(45deg);
   transform: rotate(45deg);
 }
+
+.participant_list {
+  position: absolute;
+  z-index:200;
+  display:flex;
+  flex-direction: row;
+  width:200px;
+  align-items: center;
+}
+
+.participant{
+  width:20px; height:20px;
+  border-radius:20px;
+  display:flex;
+  justify-content: center;
+  align-items:center;
+  font-size:12px;
+  border:1px solid #dcdcdc;
+}

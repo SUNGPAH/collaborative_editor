@@ -1,6 +1,7 @@
 import {Editor, EditorState, SelectionState, convertToRaw, RichUtils, Modifier, convertFromRaw} from 'draft-js';
 import {getDefaultKeyBinding, KeyBindingUtil} from 'draft-js';
 import React, {useState, useEffect, useRef} from 'react';
+import { toast } from 'react-toastify';
 
 const {hasCommandModifier} = KeyBindingUtil;
 
@@ -14,11 +15,12 @@ const Card = ({uuid, createNewCard,
   initCardType, 
   initIndentCnt,
   focus,
+  locations,
 }) => {
-
   const editorRef = useRef();
   const editorWrapperRef = useRef();
 
+  /*-------------------------------------------------------------------*/
   let defaultEditorState
   if(initContentState){
     defaultEditorState = EditorState.createWithContent(convertFromRaw(initContentState));
@@ -27,7 +29,17 @@ const Card = ({uuid, createNewCard,
   }
 
   const [editorState, setEditorState] = useState(defaultEditorState);  
-  const [dataForDelta, setDataForDelta] = useState(null);
+  const data = convertToRaw(defaultEditorState.getCurrentContent()).blocks[0]
+  const delta = {
+    text: data.text,
+    inlineStyleRanges: data.inlineStyleRanges,
+    preventRequest: true,
+  }
+  const [dataForDelta, setDataForDelta] = useState(delta);
+  /*-------------------------------------------------------------------*/
+  //delta는 editorState와 시점이 같다. 다만, delta는 quantization이 되어 있는 것 뿐이다.
+  //delta가 필요한건 editorState가 너무 불필요하게 firing을 많이 하고 있다.
+
   const [hasEnded, setHasEnded] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [endCnt, setEndCnt] = useState(0);
@@ -64,35 +76,6 @@ const Card = ({uuid, createNewCard,
       setHasEnded(false);
     }  
   }
-  
-  const onKeyUp = (evt) => {   
-    if(evt.key === "ArrowUp"){
-      return;
-    }
-
-    if(evt.key === "ArrowDown"){
-      return
-    }
-
-    if(evt.key === 'ArrowLeft' || evt.key === "ArrowRight"){
-      return
-    }
-
-    if(evt.key === "Shift" || evt.key === "Escape" || evt.key === "Command" || evt.key === "Meta"){
-      return
-    }
-    
-    if(myTimeout) {
-      clearTimeout(myTimeout);
-      setMyTimeout(setTimeout(() => {
-        updateCurrentDraft();
-      }, 500))
-    }else{
-      setMyTimeout(setTimeout(() => {
-        updateCurrentDraft();
-      }, 1000));
-    }
-  }
 
   const onKeyDown = (evt) => {
     if(evt.key === "ArrowUp"){
@@ -119,7 +102,9 @@ const Card = ({uuid, createNewCard,
   }, [hasEnded])
 
   useEffect(() => {
-    setLoaded(true);
+    setTimeout(() => {
+      setLoaded(true);
+    }, 300)
   }, [])
 
   useEffect(() => {
@@ -133,7 +118,16 @@ const Card = ({uuid, createNewCard,
       defaultEditorState = EditorState.createEmpty()
     }
 
+    const data = convertToRaw(defaultEditorState.getCurrentContent()).blocks[0]
+    const delta = {
+      text: data.text,
+      inlineStyleRanges: data.inlineStyleRanges,
+      preventRequest:true,
+    }
+    
     setEditorState(defaultEditorState)
+    setDataForDelta(delta);
+    //해당 델타로 바뀔 때는, 다른 것 못하게 한다던가.
   }, [initContentState])
 
   useEffect(() => {
@@ -168,6 +162,10 @@ const Card = ({uuid, createNewCard,
   }
 
   useEffect(() => {     
+    if(!loaded){
+      return false
+    }
+
     var selection = editorState.getSelection();    
     if (selection.isCollapsed()) {
       setToolbox(null);
@@ -182,6 +180,9 @@ const Card = ({uuid, createNewCard,
       }
     }
 
+    //가장 고난이도
+    //다른 사람이 수정을 해서 받아오는 경우도, editorState는 수정이 됨.(너도 나도 수정을 하려고 함)
+    //여기는 뭐 어떠한 경우던지, 일단 마지막 상태의 저장되어 있던 delta데이터 (엄밀히 말해선 delta가 아니고 스냅샷) - 명명을 하기가 애매하여..
     const data = convertToRaw(editorState.getCurrentContent()).blocks[0]
     const delta = {
       text: data.text,
@@ -189,16 +190,35 @@ const Card = ({uuid, createNewCard,
     }
 
     if(compareDelta(delta, dataForDelta)){
-      return
+      console.log('same, so not update - remove cursor location. Only block map and contents');
+      return false
+    }else{
+      setDataForDelta(delta);  
     }
-
-    setDataForDelta(delta);
-
   }, [editorState])
 
   useEffect(() => {
-    console.log('current content');
+    if(!loaded){
+      return;
+    }
+
+    if(dataForDelta.preventRequest){
+      return;
+    }
+    
+    console.log('-------------------------------------------------------')
     console.log(dataForDelta);
+
+    if(myTimeout) {
+      clearTimeout(myTimeout);
+      setMyTimeout(setTimeout(() => {
+        updateCurrentDraft();
+      }, 500))
+    }else{
+      setMyTimeout(setTimeout(() => {
+        updateCurrentDraft();
+      }, 1000));
+    }
   }, [dataForDelta])
 
   const compareArray = (arr1, arr2) => {
@@ -206,13 +226,15 @@ const Card = ({uuid, createNewCard,
     arr1.forEach((obj, index) => {
      Object.keys(arr1[index]).forEach(key => {
         if(!arr2[index]){
-          return false
+          same = false
+          return 
         }
 
         if(obj[key] === arr2[index][key]){
-          console.log('same!');
+          //pass this part
         }else{
           same = false
+          return //if meet false, then iteration ends there
         }
       })
     })
@@ -267,10 +289,8 @@ const Card = ({uuid, createNewCard,
   }
 
   const focusEditor = () => {
-    // console.log('focus editor');
     if(editorRef.current){
       editorRef.current.focus();
-      // editorWrapperRef.current.focus();
     }
   }
 
@@ -283,6 +303,7 @@ const Card = ({uuid, createNewCard,
   }
 
   const updateCurrentDraft = () => {
+    toast('update current Draft');
     const contentState = editorState.getCurrentContent();
     let raw = convertToRaw(contentState)
     raw.cardType = cardType
@@ -470,12 +491,21 @@ const Card = ({uuid, createNewCard,
     }
   };
 
+  const renderParticipants = () => {
+    const userIds = locations.filter(location => location.currentId === uuid).map(location => location.userId)
+    return <div className="participant_list">
+    {
+      userIds.map(userId => <div key={userId} className="participant">{userId}</div>)
+    }
+    </div>
+  }
+
   return (
     <div className="flex fdr" ref={editorWrapperRef}>     
+      {renderParticipants()}
       <div style={{width: indentCnt * 30,}}>
       </div>
       <div className="flex fdr f1" style={{padding:8, position:'relative',}} 
-      onKeyUp={onKeyUp}
       onKeyDown={onKeyDown}
       onClick={focusEditor}>
         {
