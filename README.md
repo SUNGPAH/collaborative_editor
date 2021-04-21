@@ -57,7 +57,6 @@ checkbox
 - 지우는 것과 작성하는 것에 대해서, 잘 생각해보도록 하자. ctrl + z가 지원되는 것..
 - optimzation
 
-
 - [ ] how to save
   convertToRaw
   const contentState = editorState.getCurrentContent();
@@ -159,7 +158,8 @@ what's left
   콜 보내는 것도 적당히 보내면 되니까, 그건 크게 염려는 안됨. 
   db에는 blocks에 tree말고, location 이라고 하나 만들고, 이걸 계속 업데이트 해주면 될 듯...!
 
-- [ ] 지우는 것 잘 되나?
+- [] 지우는 것 잘 되나?
+  아직 제대로 만들지 않음.
 
 - [done] 이걸 먼저 처리 하자. 너무 빠르게 뭔가 app.js 에서 너무 빠르게 동작하는 경우에, 적당히 하게 하기.
 - [ ] app.js 에서 지우는 것도 잘 처리하자.

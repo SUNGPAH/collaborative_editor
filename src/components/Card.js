@@ -2,8 +2,11 @@ import {Editor, EditorState, SelectionState, convertToRaw, RichUtils, Modifier, 
 import {getDefaultKeyBinding, KeyBindingUtil} from 'draft-js';
 import React, {useState, useEffect, useRef} from 'react';
 import { toast } from 'react-toastify';
+import useDidMountEffect from '../hooks/useDidMountEffect';
 
 const {hasCommandModifier} = KeyBindingUtil;
+
+//https://docs.google.com/presentation/d/1-lk-aW8Rl9LOuvIQDTvCWSAwArL7hMZfYL22Y00hHQ0/edit#slide=id.gce0041058c_0_22
 
 const Card = ({uuid, createNewCard, 
   updateId, 
@@ -41,7 +44,6 @@ const Card = ({uuid, createNewCard,
   //delta가 필요한건 editorState가 너무 불필요하게 firing을 많이 하고 있다.
 
   const [hasEnded, setHasEnded] = useState(false);
-  const [loaded, setLoaded] = useState(false);
   const [endCnt, setEndCnt] = useState(0);
   const [toolbox, setToolbox] = useState(null)    
   const [cardType, setCardType] = useState(initCardType || 'paragraph');
@@ -101,13 +103,8 @@ const Card = ({uuid, createNewCard,
     }
   }, [hasEnded])
 
-  useEffect(() => {
-    setTimeout(() => {
-      setLoaded(true);
-    }, 300)
-  }, [])
+  useDidMountEffect(() => {
 
-  useEffect(() => {
     if(currentId === uuid){
       return
     }
@@ -124,28 +121,21 @@ const Card = ({uuid, createNewCard,
       inlineStyleRanges: data.inlineStyleRanges,
       preventRequest:true,
     }
-    
+
+    //어짜피 dataForDelta에서 preventRequest가 트루라면, 따로 request를 날려주지 않을 텐데, 왜 여기서 delta를 업데이트 해주는가?
+      //[editorState] 에서 비교하는 곳이 있기 때문에 
     setEditorState(defaultEditorState)
     setDataForDelta(delta);
     //해당 델타로 바뀔 때는, 다른 것 못하게 한다던가.
   }, [initContentState])
 
-  useEffect(() => {
-    if(!loaded){
-      return false;
-    }
-
+  useDidMountEffect(() => {
     console.log('init card type');
     setCardType(initCardType);
-
   }, [initCardType])
 
-  useEffect(() => {
-    if(!loaded){
-      return false;
-    }
-
-    console.log('initIndentCnt');
+  useDidMountEffect(() => {
+    console.log('initially loaded..?');
     setIndentCnt(initIndentCnt);
   }, [initIndentCnt])
 
@@ -161,11 +151,7 @@ const Card = ({uuid, createNewCard,
     return t;
   }
 
-  useEffect(() => {     
-    if(!loaded){
-      return false
-    }
-
+  useDidMountEffect(() => {     
     var selection = editorState.getSelection();    
     if (selection.isCollapsed()) {
       setToolbox(null);
@@ -197,11 +183,7 @@ const Card = ({uuid, createNewCard,
     }
   }, [editorState])
 
-  useEffect(() => {
-    if(!loaded){
-      return;
-    }
-
+  useDidMountEffect(() => {
     if(dataForDelta.preventRequest){
       return;
     }
