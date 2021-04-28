@@ -64,7 +64,7 @@ function App() {
     }
     
     if(loaded && delta.updater === userId){
-      toast.success("pass this update because this user updates");
+      // toast.success("pass this update because this user updates");
       return
     }
     console.log('-------------------------');
@@ -105,7 +105,7 @@ function App() {
       return treeShallowObj
     })
     
-    toast(`new delta ${delta.updater}`);
+    // toast(`new delta ${delta.updater}`);
     setTree(_list);
 
     if(!loaded){
@@ -221,6 +221,7 @@ function App() {
     .then((ref) => {
       console.log('tree saved');
     })
+
   }
 
   const updateData = (id, raw) => {
@@ -277,25 +278,37 @@ function App() {
   }
 
   return (
-    <div className="App" style={{padding:24,}}>     
-      <div onClick={evt => add('paragraph', 0)}>+++</div>
-      {
-        tree.map((obj) => <Card key={obj.id} 
-        onCheckBox={onCheckBox}
-        initCardType={obj.initCardType}
-        initIndentCnt={obj.initIndentCnt}
-        initContentState={obj.initContentState}
-        uuid={obj.id} 
-        currentId={currentId}
-        createNewCard={add} 
-        findPrevCard={findPrevCard}
-        findNextCard={findNextCard}
-        updateId={updateId}
-        updateData={updateData}
-        focus={obj.focus}
-        locations={locations}
-        />)
-      }
+    <div className="App flex jcc" style={{padding:24, backgroundColor:'#dcdcdc', }}>     
+      <div style={{position:'fixed', height:100, zIndex:2, backgroundColor:'white', width:'100%', top:0,left:0, }}>
+      </div>
+
+      <div style={{marginTop:100,}}>
+        
+        <div onClick={evt => add('paragraph', 0)}>+++</div>
+
+        <div style={{padding:16,  width:1100, backgroundColor:'white', maxWidth:1100, borderRadius:8, display:'inline-block'}}>
+        {
+          tree.map((obj) => <Card key={obj.id} 
+          onCheckBox={onCheckBox}
+          initCardType={obj.initCardType}
+          initIndentCnt={obj.initIndentCnt}
+          initContentState={obj.initContentState}
+          uuid={obj.id} 
+          currentId={currentId}
+          createNewCard={add} 
+          findPrevCard={findPrevCard}
+          findNextCard={findNextCard}
+          updateId={updateId}
+          updateData={updateData}
+          focus={obj.focus}
+          locations={locations}
+          />)
+        }
+
+        </div>
+
+      </div>
+
       <ToastContainer />
     </div>
   );

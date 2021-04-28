@@ -285,7 +285,7 @@ const Card = ({uuid, createNewCard,
   }
 
   const updateCurrentDraft = () => {
-    toast('update current Draft');
+    // toast('update current Draft');
     const contentState = editorState.getCurrentContent();
     let raw = convertToRaw(contentState)
     raw.cardType = cardType

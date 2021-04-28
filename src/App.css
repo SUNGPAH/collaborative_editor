@@ -1,3 +1,6 @@
+body{
+  background-color:#dcdcdc;
+}
 
 .superFancyBlockquote {
   color: #999;
@@ -18,8 +21,17 @@ figure{
   flex-direction:row;
 }
 
+.fdc{
+  flex-direction:column;
+}
+
+
 .aic {
   align-items:center;
+}
+
+.jcc {
+  justify-content: center;;
 }
 
 .DraftEditor-root{
