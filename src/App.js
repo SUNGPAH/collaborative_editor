@@ -1,5 +1,5 @@
 import React, {useEffect, useState} from 'react';
-import Card from './components/Card';
+import CardMemo from './components/Card';
 import './App.css';
 import {db, firebase} from './firebase';
 import { ToastContainer, toast } from 'react-toastify';
@@ -288,7 +288,7 @@ function App() {
 
         <div style={{padding:16,  width:1100, backgroundColor:'white', maxWidth:1100, borderRadius:8, display:'inline-block'}}>
         {
-          tree.map((obj) => <Card key={obj.id} 
+          tree.map((obj) => <CardMemo key={obj.id} 
           onCheckBox={onCheckBox}
           initCardType={obj.initCardType}
           initIndentCnt={obj.initIndentCnt}

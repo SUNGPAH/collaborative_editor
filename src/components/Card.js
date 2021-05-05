@@ -530,4 +530,10 @@ const Card = ({uuid, createNewCard,
   );
 }
 
-export default Card;
+
+const areEqual = (prevProps, nextProps) => {
+	return prevProps === nextProps
+}
+const CardMemo = React.memo(Card,areEqual);
+
+export default CardMemo;
