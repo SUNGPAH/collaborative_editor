@@ -43,6 +43,8 @@ const Card = ({uuid, createNewCard,
   //delta는 editorState와 시점이 같다. 다만, delta는 quantization이 되어 있는 것 뿐이다.
   //delta가 필요한건 editorState가 너무 불필요하게 firing을 많이 하고 있다.
 
+  //여기서 curren
+
   const [hasEnded, setHasEnded] = useState(false);
   const [endCnt, setEndCnt] = useState(0);
   const [toolbox, setToolbox] = useState(null)    
@@ -152,7 +154,43 @@ const Card = ({uuid, createNewCard,
   }
 
   useDidMountEffect(() => {     
-    var selection = editorState.getSelection();    
+    const currentContent = editorState.getCurrentContent();
+    console.log('current')
+    console.log(currentContent);
+
+    console.log('---get entity map---');
+    console.log(editorState.getCurrentContent().getEntityMap());
+
+    const blockMap = editorState.getCurrentContent().getBlockMap()
+    console.log('block map');
+    console.log(blockMap);
+
+    const firstBlock = editorState.getCurrentContent().getFirstBlock()
+    console.log('first block')
+    console.log(firstBlock); // ---> contentblock
+
+    const lastblock = editorState.getCurrentContent().getLastBlock()
+
+    console.log('get plain text');
+    console.log(editorState.getCurrentContent().getPlainText())
+
+    const something = editorState.getCurrentContent().getBlockMap().first() //content block
+    console.log(something);
+    
+    console.log('get inline style at');
+    console.log(something.getInlineStyleAt(0));
+    
+    console.log('get type');
+    
+    console.log(something.getType())
+    console.log('get data');
+    console.log(something.getData());
+    console.log('get text');
+    console.log(something.getText())
+    // console.log(something.inlineStyleRanges)
+    // const data = convertToRaw(editorState.getCurrentContent()).blocks[0]
+    var selection = editorState.getSelection();
+    
     if (selection.isCollapsed()) {
       setToolbox(null);
     }else {
